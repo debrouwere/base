@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+
+"""
+Todo: make recursive environment update optional with a 
+`-s --shallow` command line flag, which will only mix in 
+the current working directory but not its subdirectories.
+"""
+
+import sys
+import os
+from subprocess import Popen, PIPE
+
+
+def first(l):
+    return l[0]
+
+def update_environment(environment, recursive=True):
+    cwd = os.getcwd()
+
+    if recursive:
+        directories = map(first, os.walk(cwd))
+    else:
+        directories = cwd
+
+    if len(cwd.split('/')) < 4 or len(directories) > 100:
+        if not input('About to add {length} directories to your PATH. Proceed?'.format(
+            length=len(directories)))
+
+    paths = ':'.join([environment['PATH']] + directories)
+    environment['PATH'] = paths
+
+    return environment
+
+def call(command, environment=os.environ):
+    return Popen(sys.argv[1:], 
+        env=environment, close_fds=True, 
+        stdin=PIPE, stdout=PIPE, stderr=PIPE)
+
+def passthrough(src, dest=sys):
+    dest.stdout.write(src.stdout.read())
+    dest.stderr.write(src.stderr.read())
+
+
+if __name__ == '__main__':
+    environment = update_environment(os.environ.copy())
+    args = sys.argv[1:]
+    sub = call(args, environment)
+    passthrough(sub)
